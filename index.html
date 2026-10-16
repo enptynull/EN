@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>내 손안의 고정지출 관리</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
+    body { font-family: 'Pretendard', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen pb-12">
+  <div class="max-w-2xl mx-auto px-4 py-8">
+    <!-- 헤더 -->
+    <header class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800">고정지출 플래너</h1>
+        <p class="text-xs text-slate-500 mt-1">매달 나가는 돈을 한눈에 파악하세요</p>
+      </div>
+      <div class="flex gap-2">
+        <button id="exportBtn" title="데이터 백업" class="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600 transition">
+          <i data-lucide="download" class="w-4 h-4"></i>
+        </button>
+        <label for="importFile" title="데이터 복원" class="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600 cursor-pointer transition">
+          <i data-lucide="upload" class="w-4 h-4"></i>
+        </label>
+        <input type="file" id="importFile" class="hidden" accept=".json" />
+      </div>
+    </header>
+
+    <!-- 요약 카드 -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+        <span class="text-xs font-semibold text-indigo-500 uppercase tracking-wider">월 고정지출</span>
+        <div id="monthlyTotal" class="text-2xl font-bold mt-1 text-slate-900">0원</div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+        <span class="text-xs font-semibold text-emerald-500 uppercase tracking-wider">연간 환산액</span>
+        <div id="yearlyTotal" class="text-2xl font-bold mt-1 text-slate-900">0원</div>
+      </div>
+    </div>
+
+    <!-- 등록 폼 -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm mb-6">
+      <h2 class="text-base font-semibold mb-3 text-slate-700">새 고정지출 등록</h2>
+      <form id="expenseForm" class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input type="text" id="title" placeholder="항목명 (예: 넷플릭스)" required class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input type="number" id="amount" placeholder="금액 (원)" required class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <select id="cycle" class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="monthly">매월</option>
+            <option value="yearly">매년</option>
+          </select>
+          <input type="number" id="payDay" min="1" max="31" placeholder="결제일 (1~31)" required class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <select id="category" class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="구독">구독</option>
+            <option value="통신/인터넷">통신/인터넷</option>
+            <option value="주거/공과금">주거/공과금</option>
+            <option value="금융/보험">금융/보험</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-xl text-sm transition shadow-sm">
+          추가하기
+        </button>
+      </form>
+    </div>
+
+    <!-- 고정지출 목록 -->
+    <div>
+      <h2 class="text-base font-semibold mb-3 text-slate-700">등록된 지출 목록</h2>
+      <div id="expenseList" class="space-y-3">
+        <!-- 자바스크립트로 렌더링 -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 상태 관리
+    let expenses = JSON.parse(localStorage.getItem('fixed_expenses')) || [];
+
+    // 유틸리티
+    const formatKRW = (num) => new Intl.NumberFormat('ko-KR').format(num) + '원';
+
+    // 저장 및 렌더링
+    function saveAndRender() {
+      localStorage.setItem('fixed_expenses', JSON.stringify(expenses));
+      renderList();
+      calculateTotals();
+      lucide.createIcons();
+    }
+
+    // 합계 계산
+    function calculateTotals() {
+      let monthly = 0;
+      let yearly = 0;
+
+      expenses.forEach(item => {
+        const amt = Number(item.amount) || 0;
+        if (item.cycle === 'monthly') {
+          monthly += amt;
+          yearly += amt * 12;
+        } else if (item.cycle === 'yearly') {
+          monthly += Math.round(amt / 12);
+          yearly += amt;
+        }
+      });
+
+      document.getElementById('monthlyTotal').textContent = formatKRW(monthly);
+      document.getElementById('yearlyTotal').textContent = formatKRW(yearly);
+    }
+
+    // D-Day 계산
+    function getDDay(payDay) {
+      const today = new Date();
+      const currentDay = today.getDate();
+      let diff = payDay - currentDay;
+      if (diff === 0) return 'D-Day (오늘)';
+      if (diff > 0) return `D-${diff}`;
+      
+      // 다음 달 계산
+      const lastDayOfCurMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      diff = (lastDayOfCurMonth - currentDay) + Number(payDay);
+      return `D-${diff}`;
+    }
+
+    // 리스트 렌더링
+    function renderList() {
+      const listContainer = document.getElementById('expenseList');
+      if (expenses.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
+            등록된 고정지출이 없습니다. 위에서 추가해보세요!
+          </div>
+        `;
+        return;
+      }
+
+      // 결제일 순 정렬
+      const sorted = [...expenses].sort((a, b) => Number(a.payDay) - Number(b.payDay));
+
+      listContainer.innerHTML = sorted.map(item => `
+        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">${item.category}</span>
+              <span class="font-semibold text-slate-800 text-sm">${item.title}</span>
+              <span class="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">${getDDay(item.payDay)}</span>
+            </div>
+            <div class="text-xs text-slate-400">
+              ${item.cycle === 'monthly' ? '매월' : '매년'} ${item.payDay}일 결제
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="font-bold text-slate-800 text-base">${formatKRW(item.amount)}</span>
+            <button onclick="deleteExpense('${item.id}')" class="text-slate-300 hover:text-rose-500 transition">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 항목 추가
+    document.getElementById('expenseForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const newExpense = {
+        id: Date.now().toString(),
+        title: document.getElementById('title').value.trim(),
+        amount: Number(document.getElementById('amount').value),
+        cycle: document.getElementById('cycle').value,
+        payDay: Number(document.getElementById('payDay').value),
+        category: document.getElementById('category').value,
+      };
+
+      expenses.push(newExpense);
+      saveAndRender();
+      e.target.reset();
+    });
+
+    // 항목 삭제
+    window.deleteExpense = function(id) {
+      if (confirm('해당 항목을 삭제하시겠습니까?')) {
+        expenses = expenses.filter(i => i.id !== id);
+        saveAndRender();
+      }
+    };
+
+    // 백업 다운로드
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(expenses, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `고정지출_백업_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // 백업 복원
+    document.getElementById('importFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const imported = JSON.parse(event.target.result);
+          if (Array.isArray(imported)) {
+            expenses = imported;
+            saveAndRender();
+            alert('데이터 복원이 완료되었습니다.');
+          }
+        } catch (err) {
+          alert('올바른 백업 JSON 파일이 아닙니다.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // 초기 실행
+    saveAndRender();
+  </script>
+</body>
+</html>
