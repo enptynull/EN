@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -19,6 +18,14 @@
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen pb-16 antialiased">
+  <!-- 토스트 알림 컨테이너 -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] transition-all duration-300 opacity-0 pointer-events-none translate-y-[-10px]">
+    <div class="bg-slate-900/90 backdrop-blur text-white text-xs px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
+      <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+      <span id="toastMsg">작업이 완료되었습니다.</span>
+    </div>
+  </div>
+
   <div class="max-w-2xl mx-auto px-4 py-6">
     
     <!-- 상단 헤더 -->
@@ -117,16 +124,17 @@
     <div class="flex flex-col gap-2.5 mb-3">
       <div class="flex items-center justify-between gap-2">
         <!-- 필터 탭 -->
-        <div class="inline-flex bg-slate-200/80 p-0.5 rounded-lg text-xs font-medium">
-          <button data-filter="all" class="filter-tab px-2.5 py-1 rounded-md bg-white text-slate-900 shadow-sm transition">전체</button>
-          <button data-filter="expense" class="filter-tab px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition">순수지출</button>
-          <button data-filter="savings" class="filter-tab px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition">저축·적금</button>
-          <button data-filter="unpaid" class="filter-tab px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition">미납만</button>
+        <div class="inline-flex bg-slate-200/80 p-0.5 rounded-lg text-xs font-medium overflow-x-auto max-w-full">
+          <button data-filter="all" class="filter-tab px-2.5 py-1 rounded-md bg-white text-slate-900 shadow-sm transition shrink-0">전체</button>
+          <button data-filter="expense" class="filter-tab px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition shrink-0">순수지출</button>
+          <button data-filter="savings" class="filter-tab px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition shrink-0">저축·적금</button>
+          <button data-filter="duration" class="filter-tab px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition shrink-0">기한/만기형</button>
+          <button data-filter="unpaid" class="filter-tab px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition shrink-0">미납만</button>
         </div>
 
         <!-- 추가 버튼 -->
-        <button id="openAddModalBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition">
-          <i data-lucide="plus" class="w-3.5 h-3.5"></i> 항목 추가
+        <button id="openAddModalBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition shrink-0">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> 추가
         </button>
       </div>
 
@@ -162,46 +170,62 @@
     <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
         <h3 id="modalTitle" class="text-base font-bold text-slate-900">고정 항목 추가</h3>
-        <button id="closeModalBtn" class="text-slate-400 hover:text-slate-600 p-1">
+        <button id="closeModalBtn" type="button" class="text-slate-400 hover:text-slate-600 p-1">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
       <form id="itemForm" class="space-y-3.5 text-xs">
         <input type="hidden" id="itemId" />
+        <input type="hidden" id="itemType" value="expense" />
 
-        <!-- 1. 지출 분류 (저축 vs 순수지출) -->
+        <!-- 1. 지출 분류 (모바일 터치 최적화 버튼형 세그먼트) -->
         <div>
           <label class="block font-semibold text-slate-700 mb-1.5">성격 구분 *</label>
           <div class="grid grid-cols-2 gap-2">
-            <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border border-slate-200 cursor-pointer has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 has-[:checked]:text-rose-700 font-medium">
-              <input type="radio" name="itemType" value="expense" class="hidden" checked />
+            <button type="button" id="btnTypeExpense" class="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border font-semibold transition bg-rose-50 border-rose-500 text-rose-700 shadow-sm">
               <i data-lucide="receipt" class="w-3.5 h-3.5"></i> 순수 지출
-            </label>
-            <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border border-slate-200 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 font-medium">
-              <input type="radio" name="itemType" value="savings" class="hidden" />
+            </button>
+            <button type="button" id="btnTypeSavings" class="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border font-semibold transition bg-white border-slate-200 text-slate-600 hover:bg-slate-50">
               <i data-lucide="piggy-bank" class="w-3.5 h-3.5"></i> 저축 · 적금
-            </label>
+            </button>
           </div>
         </div>
 
-        <!-- 2. 항목명 & 금액 (step="1"로 수정하여 1원 단위 입력 허용) -->
+        <!-- 2. 항목명 -->
         <div>
           <label class="block font-semibold text-slate-700 mb-1">항목명 *</label>
-          <input type="text" id="itemName" required placeholder="예: 주택청약, 통신요금, 넷플릭스" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          <input type="text" id="itemName" required placeholder="예: 주담대1, 청약통장, 넷플릭스" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
         </div>
 
+        <!-- 금액 & 결제일 -->
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block font-semibold text-slate-700 mb-1">월 금액 (원) *</label>
-            <input type="number" id="itemAmount" required min="1" step="1" placeholder="100000" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+            <input type="number" id="itemAmount" required min="1" step="1" inputmode="numeric" placeholder="893787" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
           </div>
           <div>
             <label class="block font-semibold text-slate-700 mb-1">결제일 (매월) *</label>
             <div class="flex items-center">
-              <input type="number" id="itemDay" required min="1" max="31" placeholder="25" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+              <input type="number" id="itemDay" required min="1" max="31" inputmode="numeric" placeholder="25" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
               <span class="ml-1.5 text-slate-500">일</span>
             </div>
+          </div>
+        </div>
+
+        <!-- 실시간 한글 금액 표기 & 원터치 추가 버튼 -->
+        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+          <div class="flex items-center justify-between text-[11px] mb-1.5">
+            <span class="text-slate-500">금액 미리보기:</span>
+            <span id="amountKoreanPreview" class="font-bold text-indigo-600">0원</span>
+          </div>
+          <div class="flex flex-wrap gap-1">
+            <button type="button" class="quick-amt-btn px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-indigo-400" data-amt="10000">+1만</button>
+            <button type="button" class="quick-amt-btn px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-indigo-400" data-amt="50000">+5만</button>
+            <button type="button" class="quick-amt-btn px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-indigo-400" data-amt="100000">+10만</button>
+            <button type="button" class="quick-amt-btn px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-indigo-400" data-amt="500000">+50만</button>
+            <button type="button" class="quick-amt-btn px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-indigo-400" data-amt="1000000">+100만</button>
+            <button type="button" id="btnResetAmt" class="px-2 py-0.5 bg-slate-200 rounded text-[10px] text-slate-600 hover:bg-slate-300">정정</button>
           </div>
         </div>
 
@@ -231,46 +255,79 @@
 
         <div>
           <label class="block font-semibold text-slate-700 mb-1">결제 계좌 / 카드 상세</label>
-          <input type="text" id="itemPaymentDetail" placeholder="예: 국민은행 급여계좌, 신한카드 Mr.Life" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          <input type="text" id="itemPaymentDetail" placeholder="예: 우리꿈통장, 국민은행 급여계좌" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
         </div>
 
         <!-- 5. 메모 -->
         <div>
           <label class="block font-semibold text-slate-700 mb-1">메모 (선택)</label>
-          <input type="text" id="itemMemo" placeholder="예: 약정 2027년까지, 연말정산 공제용" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          <input type="text" id="itemMemo" placeholder="예: 2년 약정 할인, 청년도약계좌 혜택" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
         </div>
 
-        <!-- 6. 지출 기한 더보기 옵션 (기본 숨김/무기한) -->
-        <details id="moreOptionsDetails" class="group border border-slate-200/80 rounded-lg p-2.5 bg-slate-50/60 transition-colors">
-          <summary class="flex justify-between items-center cursor-pointer list-none text-xs font-semibold text-slate-600 hover:text-slate-900 select-none">
+        <!-- 6. 지출 기한 더보기 옵션 (안정적 UI 구성) -->
+        <details id="moreOptionsDetails" class="group border border-slate-200/90 rounded-xl p-3 bg-slate-50/70 transition-colors">
+          <summary class="flex justify-between items-center cursor-pointer list-none text-xs font-semibold text-slate-700 hover:text-slate-900 select-none">
             <span class="flex items-center gap-1.5">
               <i data-lucide="calendar" class="w-3.5 h-3.5 text-indigo-500"></i>
-              더보기 (지출 기한 설정)
+              더보기 (지출 기한 / 적금 만기 설정)
             </span>
             <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 transition-transform group-open:rotate-180"></i>
           </summary>
-          <div class="mt-2.5 pt-2 border-t border-slate-200/70 space-y-2">
+          <div class="mt-3 pt-2.5 border-t border-slate-200 space-y-2.5">
             <div>
-              <label class="block font-medium text-slate-700 mb-1 text-[11px]">지출 기한 (약정 / 적금 만기 등)</label>
-              <div class="grid grid-cols-2 gap-2">
-                <select id="itemDurationType" class="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-xs">
-                  <option value="indefinite">무기한 (기본)</option>
-                  <option value="fixed">기한 지정 (월 단위)</option>
-                </select>
-                <div id="durationInputWrap" class="hidden flex items-center gap-1">
-                  <input type="number" id="itemDurationMonths" min="1" step="1" placeholder="예: 12" class="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs" />
-                  <span class="text-slate-500 text-xs shrink-0">개월</span>
+              <label class="block font-semibold text-slate-700 mb-1 text-[11px]">기한 설정 방식</label>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button type="button" id="btnDurationIndefinite" class="py-1.5 rounded-lg border text-xs font-medium bg-indigo-50 border-indigo-500 text-indigo-700 transition">
+                  무기한 (계속)
+                </button>
+                <button type="button" id="btnDurationFixed" class="py-1.5 rounded-lg border text-xs font-medium bg-white border-slate-200 text-slate-600 transition">
+                  기한 지정 (월)
+                </button>
+              </div>
+            </div>
+
+            <!-- 기한 입력 영역 (기한 지정 활성화 시 노출) -->
+            <div id="durationInputArea" class="hidden space-y-2 pt-1">
+              <div>
+                <label class="block font-medium text-slate-700 mb-1 text-[11px]">총 기간 (개월 수) *</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="number" id="itemDurationMonths" min="1" step="1" inputmode="numeric" placeholder="12" class="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs bg-white" />
+                  <span class="text-slate-500 text-xs shrink-0 font-medium">개월</span>
                 </div>
               </div>
-              <p class="text-[10px] text-slate-400 mt-1">※ 1개월부터 1개월 단위(정수)로 자유롭게 지정할 수 있습니다.</p>
+
+              <!-- 빠른 개월 수 선택 칩 -->
+              <div class="flex gap-1">
+                <button type="button" class="quick-month-btn flex-1 py-1 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-indigo-400 font-medium" data-month="6">6개월</button>
+                <button type="button" class="quick-month-btn flex-1 py-1 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-indigo-400 font-medium" data-month="12">12개월</button>
+                <button type="button" class="quick-month-btn flex-1 py-1 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-indigo-400 font-medium" data-month="24">24개월</button>
+                <button type="button" class="quick-month-btn flex-1 py-1 bg-white border border-slate-200 rounded text-[10px] text-slate-600 hover:border-indigo-400 font-medium" data-month="36">36개월</button>
+              </div>
+
+              <!-- 시작년월 (선택) -->
+              <div>
+                <label class="block font-medium text-slate-700 mb-1 text-[11px]">시작년월 (선택, 진행 회차 추적용)</label>
+                <input type="month" id="itemStartYearMonth" class="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs bg-white" />
+              </div>
+
+              <!-- 만기 총액 실시간 요약 미리보기 카드 -->
+              <div id="maturitySummaryBox" class="bg-indigo-50/80 border border-indigo-100 rounded-lg p-2.5 text-[11px] text-indigo-900 space-y-0.5">
+                <div class="flex justify-between font-semibold">
+                  <span>만기 총 예상액:</span>
+                  <span id="maturityTotalAmountText">0원</span>
+                </div>
+                <div id="maturityInfoText" class="text-[10px] text-indigo-600">
+                  ※ 기간과 금액을 입력하면 총액이 계산됩니다.
+                </div>
+              </div>
             </div>
           </div>
         </details>
 
         <!-- 버튼 영역 -->
         <div class="flex gap-2 pt-2">
-          <button type="button" id="cancelModalBtn" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition">취소</button>
-          <button type="submit" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-sm transition">저장하기</button>
+          <button type="button" id="cancelModalBtn" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition">취소</button>
+          <button type="submit" id="submitItemBtn" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-sm transition">저장하기</button>
         </div>
       </form>
     </div>
@@ -283,8 +340,9 @@
     let currentFilter = 'all';
     let typeChartInstance = null;
     let catChartInstance = null;
+    let currentDurationMode = 'indefinite'; // 'indefinite' | 'fixed'
 
-    // v2 이하 데이터 호환성 보정
+    // 이전 데이터 호환성 보정
     expenses = expenses.map(item => ({
       id: item.id || Date.now() + Math.random().toString(36).substr(2, 9),
       name: item.name || '미지정',
@@ -292,21 +350,22 @@
       day: Number(item.day) || 1,
       category: item.category || '기타',
       type: item.type || (item.category === '저축/투자' ? 'savings' : 'expense'),
-      paymentMethod: item.paymentMethod || 'credit',
-      paymentDetail: item.paymentDetail || item.paymentMethod || '',
+      paymentMethod: item.paymentMethod || 'account',
+      paymentDetail: item.paymentDetail || '',
       memo: item.memo || '',
-      durationMonths: item.durationMonths ? Number(item.durationMonths) : null,
+      durationMonths: (item.durationMonths && Number(item.durationMonths) > 0) ? Number(item.durationMonths) : null,
+      startYearMonth: item.startYearMonth || null,
       isPaid: Boolean(item.isPaid)
     }));
 
     // --- 2. 기본 샘플 데이터셋 ---
     const sampleData = [
-      { id: '1', name: '청약 및 비상금 적금', amount: 300000, day: 10, category: '저축/투자', type: 'savings', paymentMethod: 'account', paymentDetail: '국민은행 주거래계좌', memo: '비과세 저축', durationMonths: 24, isPaid: true },
-      { id: '2', name: '아파트 관리비', amount: 220000, day: 25, category: '주거/통신', type: 'expense', paymentMethod: 'account', paymentDetail: '우리은행 자동이체', memo: '전기/수도 포함', durationMonths: null, isPaid: false },
-      { id: '3', name: '스마트폰 요금', amount: 55000, day: 21, category: '주거/통신', type: 'expense', paymentMethod: 'credit', paymentDetail: '현대카드', memo: '선택약정 25% 할인중', durationMonths: 12, isPaid: false },
-      { id: '4', name: '실손 의료비 보험', amount: 48000, day: 15, category: '금융/보험', type: 'expense', paymentMethod: 'account', paymentDetail: '국민은행 자동이체', memo: '4세대 실손', durationMonths: null, isPaid: true },
-      { id: '5', name: '연금저축펀드(ETF)', amount: 200000, day: 28, category: '저축/투자', type: 'savings', paymentMethod: 'account', paymentDetail: '미래에셋증권 CMA', memo: '세액공제 연 600만 한도', durationMonths: null, isPaid: false },
-      { id: '6', name: 'OTT 및 음악 구독', amount: 24000, day: 5, category: '구독/회비', type: 'expense', paymentMethod: 'check', paymentDetail: '토스뱅크 체크카드', memo: '넷플릭스+유튜브', durationMonths: null, isPaid: true }
+      { id: '1', name: '청약 및 비상금 적금', amount: 300000, day: 10, category: '저축/투자', type: 'savings', paymentMethod: 'account', paymentDetail: '국민은행 주거래계좌', memo: '비과세 저축', durationMonths: 24, startYearMonth: '2024-01', isPaid: true },
+      { id: '2', name: '주담대 원리금 상환', amount: 893787, day: 29, category: '금융/보험', type: 'expense', paymentMethod: 'account', paymentDetail: '우리꿈통장 자동이체', memo: '고정금리 3.8%', durationMonths: 360, startYearMonth: '2023-05', isPaid: false },
+      { id: '3', name: '스마트폰 5G 요금', amount: 55000, day: 21, category: '주거/통신', type: 'expense', paymentMethod: 'credit', paymentDetail: '현대카드 Zero', memo: '선택약정 25% 할인', durationMonths: 12, startYearMonth: '2024-03', isPaid: false },
+      { id: '4', name: '실손 의료비 보험', amount: 48000, day: 15, category: '금융/보험', type: 'expense', paymentMethod: 'account', paymentDetail: '국민은행 자동이체', memo: '4세대 실손', durationMonths: null, startYearMonth: null, isPaid: true },
+      { id: '5', name: '연금저축펀드(ETF)', amount: 200000, day: 28, category: '저축/투자', type: 'savings', paymentMethod: 'account', paymentDetail: '미래에셋증권 CMA', memo: '세액공제 연 600만', durationMonths: null, startYearMonth: null, isPaid: false },
+      { id: '6', name: '넷플릭스 프리미엄', amount: 17000, day: 5, category: '구독/회비', type: 'expense', paymentMethod: 'check', paymentDetail: '토스뱅크 체크카드', memo: '가족 공유', durationMonths: null, startYearMonth: null, isPaid: true }
     ];
 
     function saveExpenses() {
@@ -314,11 +373,40 @@
       render();
     }
 
-    // --- 3. D-Day 및 날짜 계산 ---
+    // 토스트 알림 함수
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = message;
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-[-10px]');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-[-10px]');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2300);
+    }
+
+    // 한글 금액 변환 유틸리티 (자릿수 오류 방지)
+    function formatKoreanAmount(num) {
+      if (!num || num <= 0) return '0원';
+      const n = Math.floor(num);
+      const eok = Math.floor(n / 100000000);
+      const man = Math.floor((n % 100000000) / 10000);
+      const rest = n % 10000;
+      let result = '';
+      if (eok > 0) result += `${eok}억 `;
+      if (man > 0) result += `${man}만 `;
+      if (rest > 0 || result === '') result += `${rest.toLocaleString()}원`;
+      else result += '원';
+      return result.trim();
+    }
+
+    // 오늘 날짜 표기
     const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
     const currentDay = today.getDate();
     document.getElementById('currentDateDisplay').textContent = 
-      `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${currentDay}일 기준`;
+      `${currentYear}년 ${currentMonth}월 ${currentDay}일 기준`;
 
     function getDDayBadge(day, isPaid) {
       if (isPaid) {
@@ -336,7 +424,7 @@
 
     function getPaymentBadge(method, detail) {
       const icons = {
-        account: '🏦 자동이체',
+        account: '🏦 계좌이체',
         credit: '💳 신용카드',
         check: '💳 체크카드',
         direct: '💸 직접송금'
@@ -346,9 +434,28 @@
       return `<span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 font-normal">${label}${detailText}</span>`;
     }
 
-    // --- 4. 렌더링 및 통계 계산 ---
+    // 기한 및 회차 계산 유틸리티
+    function getDurationBadge(durationMonths, startYearMonth) {
+      if (!durationMonths) return '';
+      let progressText = `${durationMonths}개월`;
+
+      if (startYearMonth) {
+        const [sYear, sMonth] = startYearMonth.split('-').map(Number);
+        const elapsedMonths = (currentYear - sYear) * 12 + (currentMonth - sMonth);
+        const currentRound = Math.max(1, Math.min(durationMonths, elapsedMonths + 1));
+        const remaining = Math.max(0, durationMonths - currentRound);
+
+        if (currentRound >= durationMonths) {
+          return `<span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200 font-medium">만기 완료 (${durationMonths}회)</span>`;
+        }
+        return `<span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 font-medium">${currentRound}/${durationMonths}회 (잔여 ${remaining}개월)</span>`;
+      }
+
+      return `<span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 font-medium">${progressText} 약정</span>`;
+    }
+
+    // --- 3. 렌더링 및 통계 계산 ---
     function render() {
-      // 1) 통계 계산
       let expMonthly = 0;
       let savMonthly = 0;
       let todayRemaining = 0;
@@ -361,7 +468,6 @@
           expMonthly += item.amount;
         }
 
-        // 오늘 기준 남은 지출: 미납이면서 결제일이 오늘 포함 이후인 항목
         if (!item.isPaid && item.day >= currentDay) {
           todayRemaining += item.amount;
           todayRemainingCount++;
@@ -371,7 +477,6 @@
       const totalMonthly = expMonthly + savMonthly;
       const savRate = totalMonthly > 0 ? ((savMonthly / totalMonthly) * 100).toFixed(0) : 0;
 
-      // 대시보드 반영
       document.getElementById('monthlyExpense').textContent = `${expMonthly.toLocaleString()}원`;
       document.getElementById('annualExpense').textContent = `연 ${(expMonthly * 12).toLocaleString()}원`;
 
@@ -385,13 +490,14 @@
       document.getElementById('todayRemainingAmount').textContent = `${todayRemaining.toLocaleString()}원`;
       document.getElementById('todayRemainingCount').textContent = `출금 예정 ${todayRemainingCount}건`;
 
-      // 2) 리스트 필터링 및 정렬
+      // 필터링 및 검색
       const searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
       const sortVal = document.getElementById('sortSelect').value;
 
       let filtered = expenses.filter(item => {
         if (currentFilter === 'expense' && item.type !== 'expense') return false;
         if (currentFilter === 'savings' && item.type !== 'savings') return false;
+        if (currentFilter === 'duration' && (!item.durationMonths || item.durationMonths <= 0)) return false;
         if (currentFilter === 'unpaid' && item.isPaid) return false;
         
         if (searchKeyword) {
@@ -410,7 +516,7 @@
         return 0;
       });
 
-      // 3) DOM 출력
+      // DOM 출력
       const listEl = document.getElementById('expenseList');
       const emptyEl = document.getElementById('emptyState');
       listEl.innerHTML = '';
@@ -428,13 +534,14 @@
             ? '<span class="text-[10px] px-1.5 py-0.5 rounded font-semibold badge-savings">저축</span>'
             : '<span class="text-[10px] px-1.5 py-0.5 rounded font-semibold badge-expense">지출</span>';
 
-          const durationBadge = item.durationMonths
-            ? `<span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 font-medium">${item.durationMonths}개월</span>`
-            : '';
+          const durationBadgeHtml = getDurationBadge(item.durationMonths, item.startYearMonth);
+          const totalAccumulatedText = item.durationMonths 
+            ? `만기 ${(item.amount * item.durationMonths).toLocaleString()}원` 
+            : `연 ${(item.amount * 12).toLocaleString()}원`;
 
           card.innerHTML = `
             <div class="flex items-center gap-3 min-w-0">
-              <input type="checkbox" data-id="${item.id}" class="toggle-paid w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" ${item.isPaid ? 'checked' : ''}>
+              <input type="checkbox" data-id="${item.id}" class="toggle-paid w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0" ${item.isPaid ? 'checked' : ''}>
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
                   ${typeBadge}
@@ -445,8 +552,8 @@
                   <span class="text-[11px] font-medium text-slate-600">매월 ${item.day}일</span>
                   <span class="text-[10px] text-slate-300">•</span>
                   ${getPaymentBadge(item.paymentMethod, item.paymentDetail)}
-                  ${durationBadge}
-                  ${item.memo ? `<span class="text-[10px] text-slate-400 truncate max-w-[150px]">(${item.memo})</span>` : ''}
+                  ${durationBadgeHtml}
+                  ${item.memo ? `<span class="text-[10px] text-slate-400 truncate max-w-[130px]">(${item.memo})</span>` : ''}
                 </div>
               </div>
             </div>
@@ -456,11 +563,11 @@
                 ${item.amount.toLocaleString()}원
               </div>
               <div class="text-[10px] text-slate-400 mt-0.5 font-medium">
-                연 ${(item.amount * 12).toLocaleString()}원
+                ${totalAccumulatedText}
               </div>
               <div class="flex items-center justify-end gap-1 mt-1">
-                <button data-id="${item.id}" class="edit-btn text-slate-400 hover:text-indigo-600 p-0.5"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
-                <button data-id="${item.id}" class="delete-btn text-slate-400 hover:text-rose-600 p-0.5"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                <button data-id="${item.id}" class="edit-btn text-slate-400 hover:text-indigo-600 p-1" title="수정"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                <button data-id="${item.id}" class="delete-btn text-slate-400 hover:text-rose-600 p-1" title="삭제"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
               </div>
             </div>
           `;
@@ -468,14 +575,12 @@
         });
       }
 
-      // 차트 및 아이콘 리프레시
       renderCharts(expMonthly, savMonthly);
       lucide.createIcons();
     }
 
-    // --- 5. Chart.js 시각화 ---
+    // --- 4. Chart.js 시각화 ---
     function renderCharts(expTotal, savTotal) {
-      // 1) 지출 vs 저축 차트
       const ctxType = document.getElementById('typeChart').getContext('2d');
       if (typeChartInstance) typeChartInstance.destroy();
       
@@ -497,7 +602,6 @@
         }
       });
 
-      // 2) 카테고리별 차트
       const catTotals = {};
       expenses.forEach(i => {
         catTotals[i.category] = (catTotals[i.category] || 0) + i.amount;
@@ -525,6 +629,277 @@
       });
     }
 
+    // --- 5. 모달 및 폼 상태 관리 ---
+    const modal = document.getElementById('itemModal');
+    const form = document.getElementById('itemForm');
+    const btnTypeExpense = document.getElementById('btnTypeExpense');
+    const btnTypeSavings = document.getElementById('btnTypeSavings');
+    const itemTypeInput = document.getElementById('itemType');
+    const itemAmountInput = document.getElementById('itemAmount');
+    const amountKoreanPreview = document.getElementById('amountKoreanPreview');
+    const moreDetails = document.getElementById('moreOptionsDetails');
+    const btnDurationIndefinite = document.getElementById('btnDurationIndefinite');
+    const btnDurationFixed = document.getElementById('btnDurationFixed');
+    const durationInputArea = document.getElementById('durationInputArea');
+    const itemDurationMonths = document.getElementById('itemDurationMonths');
+    const itemStartYearMonth = document.getElementById('itemStartYearMonth');
+    const maturityTotalAmountText = document.getElementById('maturityTotalAmountText');
+    const maturityInfoText = document.getElementById('maturityInfoText');
+
+    // 지출 vs 저축 세그먼트 전환
+    function setItemType(type) {
+      itemTypeInput.value = type;
+      if (type === 'savings') {
+        btnTypeSavings.className = "flex items-center justify-center gap-1.5 py-2.5 rounded-xl border font-semibold transition bg-blue-50 border-blue-500 text-blue-700 shadow-sm";
+        btnTypeExpense.className = "flex items-center justify-center gap-1.5 py-2.5 rounded-xl border font-semibold transition bg-white border-slate-200 text-slate-600 hover:bg-slate-50";
+        // 카테고리 자동 권장
+        const catSelect = document.getElementById('itemCategory');
+        if (catSelect.value !== '저축/투자') {
+          catSelect.value = '저축/투자';
+        }
+      } else {
+        btnTypeExpense.className = "flex items-center justify-center gap-1.5 py-2.5 rounded-xl border font-semibold transition bg-rose-50 border-rose-500 text-rose-700 shadow-sm";
+        btnTypeSavings.className = "flex items-center justify-center gap-1.5 py-2.5 rounded-xl border font-semibold transition bg-white border-slate-200 text-slate-600 hover:bg-slate-50";
+        const catSelect = document.getElementById('itemCategory');
+        if (catSelect.value === '저축/투자') {
+          catSelect.value = '주거/통신';
+        }
+      }
+      updateMaturityPreview();
+    }
+
+    btnTypeExpense.addEventListener('click', () => setItemType('expense'));
+    btnTypeSavings.addEventListener('click', () => setItemType('savings'));
+
+    // 카테고리 수동 변경 시 성격 자동 연동
+    document.getElementById('itemCategory').addEventListener('change', (e) => {
+      if (e.target.value === '저축/투자') {
+        setItemType('savings');
+      }
+    });
+
+    // 금액 실시간 한글 표기 & 계산
+    function updateAmountPreview() {
+      const amt = Number(itemAmountInput.value) || 0;
+      amountKoreanPreview.textContent = formatKoreanAmount(amt);
+      updateMaturityPreview();
+    }
+
+    itemAmountInput.addEventListener('input', updateAmountPreview);
+
+    // 원터치 빠른 금액 추가 버튼
+    document.querySelectorAll('.quick-amt-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const addVal = Number(btn.dataset.amt);
+        const curVal = Number(itemAmountInput.value) || 0;
+        itemAmountInput.value = curVal + addVal;
+        updateAmountPreview();
+      });
+    });
+
+    document.getElementById('btnResetAmt').addEventListener('click', () => {
+      itemAmountInput.value = '';
+      updateAmountPreview();
+    });
+
+    // 기한 설정 모드 전환 (무기한 vs 기한 지정)
+    function setDurationMode(mode) {
+      currentDurationMode = mode;
+      if (mode === 'fixed') {
+        btnDurationFixed.className = "py-1.5 rounded-lg border text-xs font-semibold bg-indigo-50 border-indigo-500 text-indigo-700 transition";
+        btnDurationIndefinite.className = "py-1.5 rounded-lg border text-xs font-medium bg-white border-slate-200 text-slate-600 transition";
+        durationInputArea.classList.remove('hidden');
+        if (!itemDurationMonths.value) itemDurationMonths.value = '12';
+      } else {
+        btnDurationIndefinite.className = "py-1.5 rounded-lg border text-xs font-semibold bg-indigo-50 border-indigo-500 text-indigo-700 transition";
+        btnDurationFixed.className = "py-1.5 rounded-lg border text-xs font-medium bg-white border-slate-200 text-slate-600 transition";
+        durationInputArea.classList.add('hidden');
+        itemDurationMonths.value = '';
+        itemStartYearMonth.value = '';
+      }
+      updateMaturityPreview();
+    }
+
+    btnDurationIndefinite.addEventListener('click', () => setDurationMode('indefinite'));
+    btnDurationFixed.addEventListener('click', () => setDurationMode('fixed'));
+
+    // 퀵 개월 수 버튼
+    document.querySelectorAll('.quick-month-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        itemDurationMonths.value = btn.dataset.month;
+        updateMaturityPreview();
+      });
+    });
+
+    itemDurationMonths.addEventListener('input', updateMaturityPreview);
+    itemStartYearMonth.addEventListener('input', updateMaturityPreview);
+
+    // 만기 총액 및 정보 실시간 계산
+    function updateMaturityPreview() {
+      const amt = Number(itemAmountInput.value) || 0;
+      const months = parseInt(itemDurationMonths.value, 10);
+
+      if (currentDurationMode === 'fixed' && months > 0 && amt > 0) {
+        const total = amt * months;
+        maturityTotalAmountText.textContent = `${total.toLocaleString()}원 (${formatKoreanAmount(total)})`;
+        
+        const typeLabel = itemTypeInput.value === 'savings' ? '적금 만기 시 총 저축액' : '약정 기간 동안 총 납부액';
+        let detailMsg = `※ ${months}개월 동안 매월 ${amt.toLocaleString()}원씩 납부 시 ${typeLabel}입니다.`;
+
+        if (itemStartYearMonth.value) {
+          const [sY, sM] = itemStartYearMonth.value.split('-').map(Number);
+          const endY = sY + Math.floor((sM - 1 + months) / 12);
+          const endM = ((sM - 1 + months) % 12) + 1;
+          detailMsg += ` (만기 예정월: ${endY}년 ${endM}월)`;
+        }
+
+        maturityInfoText.textContent = detailMsg;
+      } else {
+        maturityTotalAmountText.textContent = '0원';
+        maturityInfoText.textContent = '※ 기간과 금액을 입력하면 만기 총액이 자동 계산됩니다.';
+      }
+    }
+
+    // 모달 열기 & 닫기
+    function openModal(editId = null) {
+      form.reset();
+      moreDetails.removeAttribute('open');
+      setDurationMode('indefinite');
+      setItemType('expense');
+      amountKoreanPreview.textContent = '0원';
+
+      if (editId) {
+        const item = expenses.find(i => i.id === editId);
+        if (!item) return;
+
+        document.getElementById('modalTitle').textContent = '항목 수정';
+        document.getElementById('itemId').value = item.id;
+        setItemType(item.type || 'expense');
+        document.getElementById('itemName').value = item.name;
+        document.getElementById('itemAmount').value = item.amount;
+        document.getElementById('itemDay').value = item.day;
+        document.getElementById('itemCategory').value = item.category;
+        document.getElementById('itemPaymentMethod').value = item.paymentMethod;
+        document.getElementById('itemPaymentDetail').value = item.paymentDetail || '';
+        document.getElementById('itemMemo').value = item.memo || '';
+
+        updateAmountPreview();
+
+        if (item.durationMonths && Number(item.durationMonths) > 0) {
+          moreDetails.setAttribute('open', '');
+          setDurationMode('fixed');
+          itemDurationMonths.value = item.durationMonths;
+          if (item.startYearMonth) {
+            itemStartYearMonth.value = item.startYearMonth;
+          }
+          updateMaturityPreview();
+        }
+      } else {
+        document.getElementById('modalTitle').textContent = '새 고정 항목 등록';
+        document.getElementById('itemId').value = '';
+        // 신규 등록 시 기본 오늘 날짜
+        document.getElementById('itemDay').value = currentDay;
+      }
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+    }
+
+    document.getElementById('openAddModalBtn').addEventListener('click', () => openModal());
+    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+    document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
+
+    // 폼 저장 (디버그 및 예외 처리 완비)
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      try {
+        const id = document.getElementById('itemId').value;
+        const type = itemTypeInput.value || 'expense';
+        const name = document.getElementById('itemName').value.trim();
+        const amount = Number(document.getElementById('itemAmount').value);
+        const day = Number(document.getElementById('itemDay').value);
+        const category = document.getElementById('itemCategory').value;
+        const paymentMethod = document.getElementById('itemPaymentMethod').value;
+        const paymentDetail = document.getElementById('itemPaymentDetail').value.trim();
+        const memo = document.getElementById('itemMemo').value.trim();
+
+        if (!name) {
+          alert('항목명을 입력해 주세요.');
+          return;
+        }
+        if (!amount || amount <= 0) {
+          alert('올바른 금액을 입력해 주세요.');
+          return;
+        }
+        if (!day || day < 1 || day > 31) {
+          alert('결제일은 1일부터 31일 사이로 입력해 주세요.');
+          return;
+        }
+
+        // 기한 계산 (fixed 모드일 때만 개월 수 저장)
+        let durationMonths = null;
+        let startYearMonth = null;
+
+        if (currentDurationMode === 'fixed') {
+          const m = parseInt(itemDurationMonths.value, 10);
+          if (!m || m < 1) {
+            alert('기한 지정 시 개월 수를 1개월 이상 입력해 주세요.');
+            itemDurationMonths.focus();
+            return;
+          }
+          durationMonths = m;
+          startYearMonth = itemStartYearMonth.value || null;
+        }
+
+        if (id) {
+          // 수정
+          const index = expenses.findIndex(i => i.id === id);
+          if (index !== -1) {
+            expenses[index] = {
+              ...expenses[index],
+              type,
+              name,
+              amount,
+              day,
+              category,
+              paymentMethod,
+              paymentDetail,
+              memo,
+              durationMonths,
+              startYearMonth
+            };
+            showToast('항목이 성공적으로 수정되었습니다.');
+          }
+        } else {
+          // 신규 추가
+          expenses.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            type,
+            name,
+            amount,
+            day,
+            category,
+            paymentMethod,
+            paymentDetail,
+            memo,
+            durationMonths,
+            startYearMonth,
+            isPaid: false
+          });
+          showToast('새 고정 항목이 등록되었습니다.');
+        }
+
+        saveExpenses();
+        closeModal();
+      } catch (err) {
+        console.error('Save error:', err);
+        alert('저장 중 오류가 발생했습니다: ' + err.message);
+      }
+    });
+
     // --- 6. 이벤트 핸들러 바인딩 ---
     // 납부 여부 체크박스 토글
     document.getElementById('expenseList').addEventListener('change', (e) => {
@@ -534,6 +909,7 @@
         if (item) {
           item.isPaid = e.target.checked;
           saveExpenses();
+          showToast(item.isPaid ? '완납 처리되었습니다.' : '미납 상태로 변경되었습니다.');
         }
       }
     });
@@ -545,9 +921,11 @@
 
       if (delBtn) {
         const id = delBtn.dataset.id;
-        if (confirm('이 항목을 삭제하시겠습니까?')) {
+        const item = expenses.find(i => i.id === id);
+        if (confirm(`'${item ? item.name : '항목'}'을(를) 삭제하시겠습니까?`)) {
           expenses = expenses.filter(i => i.id !== id);
           saveExpenses();
+          showToast('항목이 삭제되었습니다.');
         }
       } else if (editBtn) {
         const id = editBtn.dataset.id;
@@ -573,117 +951,12 @@
     document.getElementById('searchInput').addEventListener('input', render);
     document.getElementById('sortSelect').addEventListener('change', render);
 
-    // 모달 관리
-    const modal = document.getElementById('itemModal');
-    const form = document.getElementById('itemForm');
-    const moreDetails = document.getElementById('moreOptionsDetails');
-    const durationTypeSelect = document.getElementById('itemDurationType');
-    const durationInputWrap = document.getElementById('durationInputWrap');
-    const durationMonthsInput = document.getElementById('itemDurationMonths');
-
-    // 기한 구분 셀렉트(무기한 vs 기한 지정) 변경 감지
-    durationTypeSelect.addEventListener('change', () => {
-      if (durationTypeSelect.value === 'fixed') {
-        durationInputWrap.classList.remove('hidden');
-        if (!durationMonthsInput.value) durationMonthsInput.value = '12';
-        durationMonthsInput.focus();
-      } else {
-        durationInputWrap.classList.add('hidden');
-        durationMonthsInput.value = '';
-      }
-    });
-
-    function openModal(editId = null) {
-      form.reset();
-      moreDetails.removeAttribute('open');
-      durationInputWrap.classList.add('hidden');
-      durationTypeSelect.value = 'indefinite';
-      durationMonthsInput.value = '';
-
-      if (editId) {
-        const item = expenses.find(i => i.id === editId);
-        document.getElementById('modalTitle').textContent = '항목 수정';
-        document.getElementById('itemId').value = item.id;
-        document.querySelector(`input[name="itemType"][value="${item.type}"]`).checked = true;
-        document.getElementById('itemName').value = item.name;
-        document.getElementById('itemAmount').value = item.amount;
-        document.getElementById('itemDay').value = item.day;
-        document.getElementById('itemCategory').value = item.category;
-        document.getElementById('itemPaymentMethod').value = item.paymentMethod;
-        document.getElementById('itemPaymentDetail').value = item.paymentDetail || '';
-        document.getElementById('itemMemo').value = item.memo || '';
-
-        // 기존 기한 데이터가 있으면 더보기를 펼치고 값 세팅
-        if (item.durationMonths && Number(item.durationMonths) > 0) {
-          moreDetails.setAttribute('open', '');
-          durationTypeSelect.value = 'fixed';
-          durationInputWrap.classList.remove('hidden');
-          durationMonthsInput.value = item.durationMonths;
-        }
-      } else {
-        document.getElementById('modalTitle').textContent = '새 고정 항목 등록';
-        document.getElementById('itemId').value = '';
-      }
-      modal.classList.remove('hidden');
-      lucide.createIcons();
-    }
-
-    function closeModal() {
-      modal.classList.add('hidden');
-    }
-
-    document.getElementById('openAddModalBtn').addEventListener('click', () => openModal());
-    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-    document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const id = document.getElementById('itemId').value;
-      const type = document.querySelector('input[name="itemType"]:checked').value;
-      const name = document.getElementById('itemName').value.trim();
-      const amount = Number(document.getElementById('itemAmount').value);
-      const day = Number(document.getElementById('itemDay').value);
-      const category = document.getElementById('itemCategory').value;
-      const paymentMethod = document.getElementById('itemPaymentMethod').value;
-      const paymentDetail = document.getElementById('itemPaymentDetail').value.trim();
-      const memo = document.getElementById('itemMemo').value.trim();
-      
-      const durationType = durationTypeSelect.value;
-      const durationMonths = (durationType === 'fixed' && durationMonthsInput.value)
-        ? Math.max(1, parseInt(durationMonthsInput.value, 10))
-        : null;
-
-      if (id) {
-        // 수정
-        const index = expenses.findIndex(i => i.id === id);
-        if (index !== -1) {
-          expenses[index] = { ...expenses[index], type, name, amount, day, category, paymentMethod, paymentDetail, memo, durationMonths };
-        }
-      } else {
-        // 추가
-        expenses.push({
-          id: Date.now().toString(),
-          type,
-          name,
-          amount,
-          day,
-          category,
-          paymentMethod,
-          paymentDetail,
-          memo,
-          durationMonths,
-          isPaid: false
-        });
-      }
-      saveExpenses();
-      closeModal();
-    });
-
     // 샘플 데이터 채우기
     document.getElementById('quickFillBtn').addEventListener('click', () => {
-      if (confirm('실생활 샘플 데이터를 불러오시겠습니까? 기존 데이터 뒤에 추가됩니다.')) {
+      if (confirm('실생활 샘플 데이터를 불러오시겠습니까? 기존 목록 뒤에 추가됩니다.')) {
         expenses = [...expenses, ...sampleData];
         saveExpenses();
+        showToast('샘플 데이터가 등록되었습니다.');
       }
     });
 
@@ -696,6 +969,7 @@
       a.download = `고정지출_백업_${new Date().toISOString().slice(0,10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      showToast('백업 파일이 다운로드되었습니다.');
     });
 
     // 복원 (JSON 업로드)
@@ -707,9 +981,12 @@
         try {
           const imported = JSON.parse(event.target.result);
           if (Array.isArray(imported)) {
-            expenses = imported;
+            expenses = imported.map(item => ({
+              ...item,
+              durationMonths: item.durationMonths ? Number(item.durationMonths) : null
+            }));
             saveExpenses();
-            alert('데이터 복원이 완료되었습니다.');
+            showToast('데이터 복원이 완료되었습니다.');
           }
         } catch (err) {
           alert('올바른 백업 파일(JSON)이 아닙니다.');
@@ -723,4 +1000,3 @@
   </script>
 </body>
 </html>
-```
