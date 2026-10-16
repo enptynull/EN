@@ -179,7 +179,7 @@
         <input type="hidden" id="itemId" />
         <input type="hidden" id="itemType" value="expense" />
 
-        <!-- 1. 지출 분류 (모바일 터치 최적화 버튼형 세그먼트) -->
+        <!-- 1. 지출 분류 -->
         <div>
           <label class="block font-semibold text-slate-700 mb-1.5">성격 구분 *</label>
           <div class="grid grid-cols-2 gap-2">
@@ -253,18 +253,39 @@
           </select>
         </div>
 
+        <!-- 5. 결제 계좌 / 카드 상세 (자동완성 드롭다운 & 원터치 칩 탑재) -->
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">결제 계좌 / 카드 상세</label>
-          <input type="text" id="itemPaymentDetail" placeholder="예: 우리꿈통장, 국민은행 급여계좌" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-semibold text-slate-700">결제 계좌 / 카드 상세</label>
+            <span class="text-[10px] text-indigo-500 font-normal">이전 입력 자동제안</span>
+          </div>
+          <div class="relative">
+            <input type="text" id="itemPaymentDetail" list="paymentDetailDataList" autocomplete="off" placeholder="예: 우리꿈통장, 국민은행 급여계좌" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none pr-8" />
+            <i data-lucide="history" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none"></i>
+          </div>
+          <!-- 네이티브 드롭다운 제안 데이터리스트 -->
+          <datalist id="paymentDetailDataList"></datalist>
+          <!-- 모바일 친화 원터치 빠른 선택 칩 -->
+          <div id="paymentDetailChips" class="flex flex-wrap gap-1 mt-1.5 empty:hidden"></div>
         </div>
 
-        <!-- 5. 메모 -->
+        <!-- 6. 메모 (자동완성 드롭다운 & 원터치 칩 탑재) -->
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">메모 (선택)</label>
-          <input type="text" id="itemMemo" placeholder="예: 2년 약정 할인, 청년도약계좌 혜택" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-semibold text-slate-700">메모 (선택)</label>
+            <span class="text-[10px] text-indigo-500 font-normal">자주 쓴 메모 제안</span>
+          </div>
+          <div class="relative">
+            <input type="text" id="itemMemo" list="memoDataList" autocomplete="off" placeholder="예: 2년 약정 할인, 청년도약계좌 혜택" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none pr-8" />
+            <i data-lucide="history" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none"></i>
+          </div>
+          <!-- 네이티브 드롭다운 제안 데이터리스트 -->
+          <datalist id="memoDataList"></datalist>
+          <!-- 모바일 친화 원터치 빠른 선택 칩 -->
+          <div id="memoChips" class="flex flex-wrap gap-1 mt-1.5 empty:hidden"></div>
         </div>
 
-        <!-- 6. 지출 기한 더보기 옵션 (안정적 UI 구성) -->
+        <!-- 7. 지출 기한 더보기 옵션 -->
         <details id="moreOptionsDetails" class="group border border-slate-200/90 rounded-xl p-3 bg-slate-50/70 transition-colors">
           <summary class="flex justify-between items-center cursor-pointer list-none text-xs font-semibold text-slate-700 hover:text-slate-900 select-none">
             <span class="flex items-center gap-1.5">
@@ -286,7 +307,7 @@
               </div>
             </div>
 
-            <!-- 기한 입력 영역 (기한 지정 활성화 시 노출) -->
+            <!-- 기한 입력 영역 -->
             <div id="durationInputArea" class="hidden space-y-2 pt-1">
               <div>
                 <label class="block font-medium text-slate-700 mb-1 text-[11px]">총 기간 (개월 수) *</label>
@@ -336,11 +357,12 @@
   <script>
     // --- 1. 상태 및 로컬 스토리지 초기화 ---
     const STORAGE_KEY = 'fixed_expenses_v3';
+    const HISTORY_STORAGE_PREFIX = 'budget_frequent_';
     let expenses = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     let currentFilter = 'all';
     let typeChartInstance = null;
     let catChartInstance = null;
-    let currentDurationMode = 'indefinite'; // 'indefinite' | 'fixed'
+    let currentDurationMode = 'indefinite';
 
     // 이전 데이터 호환성 보정
     expenses = expenses.map(item => ({
@@ -358,12 +380,12 @@
       isPaid: Boolean(item.isPaid)
     }));
 
-    // --- 2. 기본 샘플 데이터셋 ---
+    // 기본 샘플 데이터셋
     const sampleData = [
       { id: '1', name: '청약 및 비상금 적금', amount: 300000, day: 10, category: '저축/투자', type: 'savings', paymentMethod: 'account', paymentDetail: '국민은행 주거래계좌', memo: '비과세 저축', durationMonths: 24, startYearMonth: '2024-01', isPaid: true },
       { id: '2', name: '주담대 원리금 상환', amount: 893787, day: 29, category: '금융/보험', type: 'expense', paymentMethod: 'account', paymentDetail: '우리꿈통장 자동이체', memo: '고정금리 3.8%', durationMonths: 360, startYearMonth: '2023-05', isPaid: false },
       { id: '3', name: '스마트폰 5G 요금', amount: 55000, day: 21, category: '주거/통신', type: 'expense', paymentMethod: 'credit', paymentDetail: '현대카드 Zero', memo: '선택약정 25% 할인', durationMonths: 12, startYearMonth: '2024-03', isPaid: false },
-      { id: '4', name: '실손 의료비 보험', amount: 48000, day: 15, category: '금융/보험', type: 'expense', paymentMethod: 'account', paymentDetail: '국민은행 자동이체', memo: '4세대 실손', durationMonths: null, startYearMonth: null, isPaid: true },
+      { id: '4', name: '실손 의료비 보험', amount: 48000, day: 15, category: '금융/보험', type: 'expense', paymentMethod: 'account', paymentDetail: '국민은행 주거래계좌', memo: '4세대 실손', durationMonths: null, startYearMonth: null, isPaid: true },
       { id: '5', name: '연금저축펀드(ETF)', amount: 200000, day: 28, category: '저축/투자', type: 'savings', paymentMethod: 'account', paymentDetail: '미래에셋증권 CMA', memo: '세액공제 연 600만', durationMonths: null, startYearMonth: null, isPaid: false },
       { id: '6', name: '넷플릭스 프리미엄', amount: 17000, day: 5, category: '구독/회비', type: 'expense', paymentMethod: 'check', paymentDetail: '토스뱅크 체크카드', memo: '가족 공유', durationMonths: null, startYearMonth: null, isPaid: true }
     ];
@@ -373,7 +395,7 @@
       render();
     }
 
-    // 토스트 알림 함수
+    // 토스트 알림
     function showToast(message) {
       const toast = document.getElementById('toast');
       document.getElementById('toastMsg').textContent = message;
@@ -385,7 +407,7 @@
       }, 2300);
     }
 
-    // 한글 금액 변환 유틸리티 (자릿수 오류 방지)
+    // 한글 금액 변환
     function formatKoreanAmount(num) {
       if (!num || num <= 0) return '0원';
       const n = Math.floor(num);
@@ -400,7 +422,7 @@
       return result.trim();
     }
 
-    // 오늘 날짜 표기
+    // 날짜 기준 표시
     const today = new Date();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth() + 1;
@@ -434,7 +456,6 @@
       return `<span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 font-normal">${label}${detailText}</span>`;
     }
 
-    // 기한 및 회차 계산 유틸리티
     function getDurationBadge(durationMonths, startYearMonth) {
       if (!durationMonths) return '';
       let progressText = `${durationMonths}개월`;
@@ -452,6 +473,73 @@
       }
 
       return `<span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 font-medium">${progressText} 약정</span>`;
+    }
+
+    // --- 2. 자주 입력하는 내역 학습 및 제안 엔진 ---
+    function getFrequentItems(field) {
+      const counts = {};
+      
+      // 1) 현재 등록된 모든 항목에서 빈도수 집계
+      expenses.forEach(item => {
+        const val = (item[field] || '').trim();
+        if (val) counts[val] = (counts[val] || 0) + 2;
+      });
+
+      // 2) 로컬스토리지에 누적된 과거 이력 병합
+      try {
+        const savedHistory = JSON.parse(localStorage.getItem(HISTORY_STORAGE_PREFIX + field)) || [];
+        savedHistory.forEach((val, idx) => {
+          if (val) counts[val] = (counts[val] || 0) + (savedHistory.length - idx);
+        });
+      } catch (e) {}
+
+      // 빈도수 내림차순 정렬
+      return Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    }
+
+    function saveToFrequentHistory(field, val) {
+      if (!val || !val.trim()) return;
+      const cleanVal = val.trim();
+      try {
+        let history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_PREFIX + field)) || [];
+        history = history.filter(v => v !== cleanVal);
+        history.unshift(cleanVal);
+        if (history.length > 25) history = history.slice(0, 25);
+        localStorage.setItem(HISTORY_STORAGE_PREFIX + field, JSON.stringify(history));
+      } catch (e) {}
+    }
+
+    function updateSuggestionUI() {
+      renderFieldSuggestions('paymentDetail', 'paymentDetailDataList', 'paymentDetailChips', itemPaymentDetail);
+      renderFieldSuggestions('memo', 'memoDataList', 'memoChips', itemMemo);
+    }
+
+    function renderFieldSuggestions(field, dataListId, chipsContainerId, targetInput) {
+      const frequentList = getFrequentItems(field);
+      const dataListEl = document.getElementById(dataListId);
+      const chipsEl = document.getElementById(chipsContainerId);
+
+      // 드롭다운 datalist 채우기
+      if (dataListEl) {
+        dataListEl.innerHTML = frequentList.map(val => `<option value="${val}"></option>`).join('');
+      }
+
+      // 모바일 원터치 칩 채우기 (상위 4개 노출)
+      if (chipsEl) {
+        chipsEl.innerHTML = '';
+        const topItems = frequentList.slice(0, 4);
+        topItems.forEach(val => {
+          const chipBtn = document.createElement('button');
+          chipBtn.type = 'button';
+          chipBtn.className = 'text-[10px] bg-slate-100 hover:bg-indigo-50 active:bg-indigo-100 text-slate-700 hover:text-indigo-700 px-2 py-0.5 rounded-md border border-slate-200 hover:border-indigo-300 font-medium transition flex items-center gap-1 shrink-0';
+          chipBtn.innerHTML = `<span>${val}</span>`;
+          chipBtn.addEventListener('click', () => {
+            targetInput.value = val;
+            targetInput.focus();
+          });
+          chipsEl.appendChild(chipBtn);
+        });
+      }
     }
 
     // --- 3. 렌더링 및 통계 계산 ---
@@ -637,6 +725,8 @@
     const itemTypeInput = document.getElementById('itemType');
     const itemAmountInput = document.getElementById('itemAmount');
     const amountKoreanPreview = document.getElementById('amountKoreanPreview');
+    const itemPaymentDetail = document.getElementById('itemPaymentDetail');
+    const itemMemo = document.getElementById('itemMemo');
     const moreDetails = document.getElementById('moreOptionsDetails');
     const btnDurationIndefinite = document.getElementById('btnDurationIndefinite');
     const btnDurationFixed = document.getElementById('btnDurationFixed');
@@ -652,7 +742,6 @@
       if (type === 'savings') {
         btnTypeSavings.className = "flex items-center justify-center gap-1.5 py-2.5 rounded-xl border font-semibold transition bg-blue-50 border-blue-500 text-blue-700 shadow-sm";
         btnTypeExpense.className = "flex items-center justify-center gap-1.5 py-2.5 rounded-xl border font-semibold transition bg-white border-slate-200 text-slate-600 hover:bg-slate-50";
-        // 카테고리 자동 권장
         const catSelect = document.getElementById('itemCategory');
         if (catSelect.value !== '저축/투자') {
           catSelect.value = '저축/투자';
@@ -671,14 +760,13 @@
     btnTypeExpense.addEventListener('click', () => setItemType('expense'));
     btnTypeSavings.addEventListener('click', () => setItemType('savings'));
 
-    // 카테고리 수동 변경 시 성격 자동 연동
     document.getElementById('itemCategory').addEventListener('change', (e) => {
       if (e.target.value === '저축/투자') {
         setItemType('savings');
       }
     });
 
-    // 금액 실시간 한글 표기 & 계산
+    // 금액 실시간 한글 표기
     function updateAmountPreview() {
       const amt = Number(itemAmountInput.value) || 0;
       amountKoreanPreview.textContent = formatKoreanAmount(amt);
@@ -687,7 +775,6 @@
 
     itemAmountInput.addEventListener('input', updateAmountPreview);
 
-    // 원터치 빠른 금액 추가 버튼
     document.querySelectorAll('.quick-amt-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const addVal = Number(btn.dataset.amt);
@@ -702,7 +789,7 @@
       updateAmountPreview();
     });
 
-    // 기한 설정 모드 전환 (무기한 vs 기한 지정)
+    // 기한 설정 모드 전환
     function setDurationMode(mode) {
       currentDurationMode = mode;
       if (mode === 'fixed') {
@@ -723,7 +810,6 @@
     btnDurationIndefinite.addEventListener('click', () => setDurationMode('indefinite'));
     btnDurationFixed.addEventListener('click', () => setDurationMode('fixed'));
 
-    // 퀵 개월 수 버튼
     document.querySelectorAll('.quick-month-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         itemDurationMonths.value = btn.dataset.month;
@@ -734,7 +820,6 @@
     itemDurationMonths.addEventListener('input', updateMaturityPreview);
     itemStartYearMonth.addEventListener('input', updateMaturityPreview);
 
-    // 만기 총액 및 정보 실시간 계산
     function updateMaturityPreview() {
       const amt = Number(itemAmountInput.value) || 0;
       const months = parseInt(itemDurationMonths.value, 10);
@@ -768,6 +853,9 @@
       setItemType('expense');
       amountKoreanPreview.textContent = '0원';
 
+      // 과거 입력 기록 기반 자동완성 목록 & 빠른 선택 칩 최신화
+      updateSuggestionUI();
+
       if (editId) {
         const item = expenses.find(i => i.id === editId);
         if (!item) return;
@@ -780,8 +868,8 @@
         document.getElementById('itemDay').value = item.day;
         document.getElementById('itemCategory').value = item.category;
         document.getElementById('itemPaymentMethod').value = item.paymentMethod;
-        document.getElementById('itemPaymentDetail').value = item.paymentDetail || '';
-        document.getElementById('itemMemo').value = item.memo || '';
+        itemPaymentDetail.value = item.paymentDetail || '';
+        itemMemo.value = item.memo || '';
 
         updateAmountPreview();
 
@@ -797,7 +885,6 @@
       } else {
         document.getElementById('modalTitle').textContent = '새 고정 항목 등록';
         document.getElementById('itemId').value = '';
-        // 신규 등록 시 기본 오늘 날짜
         document.getElementById('itemDay').value = currentDay;
       }
       modal.classList.remove('hidden');
@@ -812,7 +899,7 @@
     document.getElementById('closeModalBtn').addEventListener('click', closeModal);
     document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
 
-    // 폼 저장 (디버그 및 예외 처리 완비)
+    // 폼 저장
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       try {
@@ -823,8 +910,8 @@
         const day = Number(document.getElementById('itemDay').value);
         const category = document.getElementById('itemCategory').value;
         const paymentMethod = document.getElementById('itemPaymentMethod').value;
-        const paymentDetail = document.getElementById('itemPaymentDetail').value.trim();
-        const memo = document.getElementById('itemMemo').value.trim();
+        const paymentDetail = itemPaymentDetail.value.trim();
+        const memo = itemMemo.value.trim();
 
         if (!name) {
           alert('항목명을 입력해 주세요.');
@@ -839,7 +926,6 @@
           return;
         }
 
-        // 기한 계산 (fixed 모드일 때만 개월 수 저장)
         let durationMonths = null;
         let startYearMonth = null;
 
@@ -854,8 +940,11 @@
           startYearMonth = itemStartYearMonth.value || null;
         }
 
+        // 결제 상세 및 메모 입력값 히스토리 저장 (재사용 학습)
+        if (paymentDetail) saveToFrequentHistory('paymentDetail', paymentDetail);
+        if (memo) saveToFrequentHistory('memo', memo);
+
         if (id) {
-          // 수정
           const index = expenses.findIndex(i => i.id === id);
           if (index !== -1) {
             expenses[index] = {
@@ -874,7 +963,6 @@
             showToast('항목이 성공적으로 수정되었습니다.');
           }
         } else {
-          // 신규 추가
           expenses.push({
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             type,
@@ -901,7 +989,6 @@
     });
 
     // --- 6. 이벤트 핸들러 바인딩 ---
-    // 납부 여부 체크박스 토글
     document.getElementById('expenseList').addEventListener('change', (e) => {
       if (e.target.classList.contains('toggle-paid')) {
         const id = e.target.dataset.id;
@@ -914,7 +1001,6 @@
       }
     });
 
-    // 수정 및 삭제 클릭
     document.getElementById('expenseList').addEventListener('click', (e) => {
       const editBtn = e.target.closest('.edit-btn');
       const delBtn = e.target.closest('.delete-btn');
@@ -933,7 +1019,6 @@
       }
     });
 
-    // 필터 탭 전환
     document.querySelectorAll('.filter-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.filter-tab').forEach(t => {
@@ -947,20 +1032,21 @@
       });
     });
 
-    // 검색 및 정렬 감지
     document.getElementById('searchInput').addEventListener('input', render);
     document.getElementById('sortSelect').addEventListener('change', render);
 
-    // 샘플 데이터 채우기
     document.getElementById('quickFillBtn').addEventListener('click', () => {
       if (confirm('실생활 샘플 데이터를 불러오시겠습니까? 기존 목록 뒤에 추가됩니다.')) {
         expenses = [...expenses, ...sampleData];
+        sampleData.forEach(s => {
+          if (s.paymentDetail) saveToFrequentHistory('paymentDetail', s.paymentDetail);
+          if (s.memo) saveToFrequentHistory('memo', s.memo);
+        });
         saveExpenses();
         showToast('샘플 데이터가 등록되었습니다.');
       }
     });
 
-    // 백업 (JSON 다운로드)
     document.getElementById('exportBtn').addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(expenses, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -972,7 +1058,6 @@
       showToast('백업 파일이 다운로드되었습니다.');
     });
 
-    // 복원 (JSON 업로드)
     document.getElementById('importFile').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
